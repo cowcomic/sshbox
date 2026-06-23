@@ -111,7 +111,8 @@ func (m *ConnectionManager) GetConnection(name string) (*models.Connection, erro
 }
 
 // UpdateConnection updates fields of an existing connection.
-func (m *ConnectionManager) UpdateConnection(name string, host *string, port *int, user, password *string, tags *[]string, notes *string) error {
+// newName, host, user, password, tags, notes are pointers; nil means no change.
+func (m *ConnectionManager) UpdateConnection(name string, newName *string, host *string, port *int, user, password *string, tags *[]string, notes *string) error {
 	cfg, err := m.store.Load()
 	if err != nil {
 		return err
@@ -119,6 +120,15 @@ func (m *ConnectionManager) UpdateConnection(name string, host *string, port *in
 
 	for i, c := range cfg.Connections {
 		if c.Name == name {
+			if newName != nil {
+				// 检查新名称是否冲突
+				for _, other := range cfg.Connections {
+					if other.Name == *newName && other.Name != name {
+						return fmt.Errorf("连接 %s 已存在", *newName)
+					}
+				}
+				cfg.Connections[i].Name = *newName
+			}
 			if host != nil {
 				cfg.Connections[i].Host = *host
 			}

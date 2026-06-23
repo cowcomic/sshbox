@@ -112,24 +112,26 @@ func newRoot(mgr *service.ConnectionManager) *cobra.Command {
 		Use: "edit <name>", Short: "编辑SSH连接", Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
-			var host *string; var port *int; var user, password *string; var tags *[]string; var notes *string
+			var newName, host, user, password *string; var port *int; var tags *[]string; var notes *string
+			if cmd.Flags().Changed("name") { v, _ := cmd.Flags().GetString("name"); newName = &v }
 			if cmd.Flags().Changed("host") { v, _ := cmd.Flags().GetString("host"); host = &v }
 			if cmd.Flags().Changed("port") { v, _ := cmd.Flags().GetInt("port"); port = &v }
 			if cmd.Flags().Changed("user") { v, _ := cmd.Flags().GetString("user"); user = &v }
 			if cmd.Flags().Changed("password") { v, _ := cmd.Flags().GetString("password"); password = &v }
 			if cmd.Flags().Changed("tag") { v, _ := cmd.Flags().GetString("tag"); p := strings.Split(v, ","); tags = &p }
 			if cmd.Flags().Changed("notes") { v, _ := cmd.Flags().GetString("notes"); notes = &v }
-			if err := mgr.UpdateConnection(name, host, port, user, password, tags, notes); err != nil { return err }
-			cmd.Printf("✓ 连接 %s 已更新\n", name)
+			if err := mgr.UpdateConnection(name, newName, host, port, user, password, tags, notes); err != nil { return err }
+			if newName != nil { cmd.Printf("✓ 连接 %s 已重命名为 %s\n", name, *newName) } else { cmd.Printf("✓ 连接 %s 已更新\n", name) }
 			return nil
 		},
 	}
-	editCmd.Flags().String("host", "", "主机地址")
-	editCmd.Flags().Int("port", 22, "端口号")
-	editCmd.Flags().String("user", "", "登录用户名")
-	editCmd.Flags().String("password", "", "登录密码")
-	editCmd.Flags().String("tag", "", "标签（替换现有标签）")
-	editCmd.Flags().String("notes", "", "备注信息")
+	editCmd.Flags().StringP("name", "N", "", "连接名称（重命名）")
+	editCmd.Flags().StringP("host", "H", "", "主机地址")
+	editCmd.Flags().IntP("port", "P", 22, "端口号")
+	editCmd.Flags().StringP("user", "u", "", "登录用户名")
+	editCmd.Flags().StringP("password", "p", "", "登录密码")
+	editCmd.Flags().StringP("tag", "t", "", "标签（替换现有标签）")
+	editCmd.Flags().StringP("notes", "n", "", "备注信息")
 
 	rmCmd := &cobra.Command{
 		Use: "rm <name>", Short: "删除SSH连接", Args: cobra.ExactArgs(1),
@@ -295,6 +297,30 @@ func TestEditCommand(t *testing.T) {
 	if !strings.Contains(out, "✓ 连接 s1 已更新") { t.Errorf("unexpected output: %q", out) }
 	showOut, _ := run(t, mgr, "show", "s1")
 	if !strings.Contains(showOut, "2.2.2.2") { t.Errorf("edit did not update host: %q", showOut) }
+}
+
+func TestEditShortFlags(t *testing.T) {
+	mgr := testManager(t)
+	run(t, mgr, "add", "s1", "--host", "1.1.1.1", "--user", "root", "--password", "pass")
+	out, err := run(t, mgr, "edit", "s1", "-H", "3.3.3.3", "-u", "admin", "-p", "newpass")
+	if err != nil { t.Fatalf("edit with short flags failed: %v", err) }
+	if !strings.Contains(out, "✓ 连接 s1 已更新") { t.Errorf("unexpected output: %q", out) }
+	showOut, _ := run(t, mgr, "show", "s1")
+	if !strings.Contains(showOut, "3.3.3.3") { t.Errorf("-H not working: %q", showOut) }
+	if !strings.Contains(showOut, "admin") { t.Errorf("-u not working: %q", showOut) }
+}
+
+func TestEditRename(t *testing.T) {
+	mgr := testManager(t)
+	run(t, mgr, "add", "s1", "--host", "1.1.1.1", "--user", "root", "--password", "pass")
+	out, err := run(t, mgr, "edit", "s1", "--name", "renamed")
+	if err != nil { t.Fatalf("edit rename failed: %v", err) }
+	if !strings.Contains(out, "已重命名为 renamed") { t.Errorf("unexpected output: %q", out) }
+	showOut, _ := run(t, mgr, "show", "renamed")
+	if !strings.Contains(showOut, "1.1.1.1") { t.Errorf("rename lost data: %q", showOut) }
+	// 旧名称应不存在
+	_, err = run(t, mgr, "show", "s1")
+	if err == nil { t.Error("old name should not exist after rename") }
 }
 
 func TestTagsCommand(t *testing.T) {

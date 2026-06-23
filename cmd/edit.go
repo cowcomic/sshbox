@@ -13,12 +13,15 @@ var editCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
 
-		var host *string
+		var newName, host, user, password *string
 		var port *int
-		var user, password *string
 		var tags *[]string
 		var notes *string
 
+		if cmd.Flags().Changed("name") {
+			v, _ := cmd.Flags().GetString("name")
+			newName = &v
+		}
 		if cmd.Flags().Changed("host") {
 			v, _ := cmd.Flags().GetString("host")
 			host = &v
@@ -45,21 +48,26 @@ var editCmd = &cobra.Command{
 			notes = &v
 		}
 
-		if err := manager.UpdateConnection(name, host, port, user, password, tags, notes); err != nil {
+		if err := manager.UpdateConnection(name, newName, host, port, user, password, tags, notes); err != nil {
 			return err
 		}
 
-		cmd.Printf("✓ 连接 %s 已更新\n", name)
+		if newName != nil {
+			cmd.Printf("✓ 连接 %s 已重命名为 %s\n", name, *newName)
+		} else {
+			cmd.Printf("✓ 连接 %s 已更新\n", name)
+		}
 		return nil
 	},
 }
 
 func init() {
-	editCmd.Flags().String("host", "", "主机地址")
-	editCmd.Flags().Int("port", 22, "端口号")
-	editCmd.Flags().String("user", "", "登录用户名")
-	editCmd.Flags().String("password", "", "登录密码")
-	editCmd.Flags().String("tag", "", "标签（替换现有标签）")
-	editCmd.Flags().String("notes", "", "备注信息")
+	editCmd.Flags().StringP("name", "N", "", "连接名称（重命名）")
+	editCmd.Flags().StringP("host", "H", "", "主机地址")
+	editCmd.Flags().IntP("port", "P", 22, "端口号")
+	editCmd.Flags().StringP("user", "u", "", "登录用户名")
+	editCmd.Flags().StringP("password", "p", "", "登录密码")
+	editCmd.Flags().StringP("tag", "t", "", "标签（替换现有标签）")
+	editCmd.Flags().StringP("notes", "n", "", "备注信息")
 	rootCmd.AddCommand(editCmd)
 }

@@ -105,7 +105,7 @@ func TestUpdateConnection(t *testing.T) {
 	newTags := []string{"new"}
 	newNotes := "new notes"
 
-	if err := m.UpdateConnection("s1", &newHost, &newPort, &newUser, &newPass, &newTags, &newNotes); err != nil {
+	if err := m.UpdateConnection("s1", nil, &newHost, &newPort, &newUser, &newPass, &newTags, &newNotes); err != nil {
 		t.Fatalf("UpdateConnection() error: %v", err)
 	}
 
@@ -124,10 +124,36 @@ func TestUpdateConnection(t *testing.T) {
 	}
 }
 
+func TestRenameConnection(t *testing.T) {
+	m := tempManager(t)
+	m.AddConnection("s1", "1.1.1.1", 22, "root", "pass", nil, "")
+	m.AddConnection("s2", "2.2.2.2", 22, "root", "pass", nil, "")
+
+	// 正常重命名
+	newName := "renamed"
+	if err := m.UpdateConnection("s1", &newName, nil, nil, nil, nil, nil, nil); err != nil {
+		t.Fatalf("Rename error: %v", err)
+	}
+	conn, _ := m.GetConnection("renamed")
+	if conn.Host != "1.1.1.1" {
+		t.Errorf("Host lost after rename: %q", conn.Host)
+	}
+	if _, err := m.GetConnection("s1"); err == nil {
+		t.Error("Old name should not exist")
+	}
+
+	// 重命名为已存在的名称应失败
+	dup := "s2"
+	err := m.UpdateConnection("renamed", &dup, nil, nil, nil, nil, nil, nil)
+	if err == nil {
+		t.Error("Rename to existing name should fail")
+	}
+}
+
 func TestUpdateNonExistent(t *testing.T) {
 	m := tempManager(t)
 	h := "1.1.1.1"
-	err := m.UpdateConnection("nope", &h, nil, nil, nil, nil, nil)
+	err := m.UpdateConnection("nope", nil, &h, nil, nil, nil, nil, nil)
 	if err == nil {
 		t.Error("UpdateConnection for non-existent should fail")
 	}
