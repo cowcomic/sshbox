@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"sort"
-	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 )
@@ -37,12 +36,12 @@ func listAllTags(cmd *cobra.Command) error {
 	}
 	sort.Strings(keys)
 
-	w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "标签\t连接数")
+	headers := []string{"标签", "连接数"}
+	var rows [][]string
 	for _, k := range keys {
-		fmt.Fprintf(w, "%s\t%d\n", k, counts[k])
+		rows = append(rows, []string{k, fmt.Sprintf("%d", counts[k])})
 	}
-	w.Flush()
+	printTable(cmd.OutOrStdout(), headers, rows)
 	return nil
 }
 
@@ -58,12 +57,12 @@ func listTagConnections(cmd *cobra.Command, tag string) error {
 	}
 
 	cmd.Printf("标签 %s (%d 个连接):\n\n", tag, len(conns))
-	w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "名称\t主机\t端口\t用户")
+	headers := []string{"名称", "主机", "端口", "用户"}
+	var rows [][]string
 	for _, c := range conns {
-		fmt.Fprintf(w, "%s\t%s\t%d\t%s\n", c.Name, c.Host, c.Port, c.User)
+		rows = append(rows, []string{c.Name, c.Host, fmt.Sprintf("%d", c.Port), c.User})
 	}
-	w.Flush()
+	printTable(cmd.OutOrStdout(), headers, rows)
 	return nil
 }
 

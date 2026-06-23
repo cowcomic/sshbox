@@ -3,7 +3,6 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 )
@@ -34,12 +33,12 @@ var listCmd = &cobra.Command{
 			}
 			cmd.Println(string(data))
 		default:
-			w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
-			fmt.Fprintln(w, "名称\t主机\t端口\t用户\t标签")
+			headers := []string{"名称", "主机", "端口", "用户", "标签"}
+			var rows [][]string
 			for _, c := range conns {
-				fmt.Fprintf(w, "%s\t%s\t%d\t%s\t%s\n", c.Name, c.Host, c.Port, c.User, joinTags(c.Tags))
+				rows = append(rows, []string{c.Name, c.Host, fmt.Sprintf("%d", c.Port), c.User, joinTags(c.Tags)})
 			}
-			w.Flush()
+			printTable(cmd.OutOrStdout(), headers, rows)
 		}
 
 		return nil

@@ -11,7 +11,6 @@ import (
 	"sshbox/internal/storage"
 	"strings"
 	"testing"
-	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 )
@@ -75,12 +74,12 @@ func newRoot(mgr *service.ConnectionManager) *cobra.Command {
 				data, _ := json.MarshalIndent(conns, "", "  ")
 				cmd.Println(string(data))
 			default:
-				w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
-				fmt.Fprintln(w, "名称\t主机\t端口\t用户\t标签")
+				headers := []string{"名称", "主机", "端口", "用户", "标签"}
+				var rows [][]string
 				for _, c := range conns {
-					fmt.Fprintf(w, "%s\t%s\t%d\t%s\t%s\n", c.Name, c.Host, c.Port, c.User, strings.Join(c.Tags, ","))
+					rows = append(rows, []string{c.Name, c.Host, fmt.Sprintf("%d", c.Port), c.User, strings.Join(c.Tags, ",")})
 				}
-				w.Flush()
+				printTable(cmd.OutOrStdout(), headers, rows)
 			}
 			return nil
 		},
@@ -146,16 +145,15 @@ func newRoot(mgr *service.ConnectionManager) *cobra.Command {
 		Use: "tags [tag]", Short: "列出标签及其连接", Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
-				// Show connections for specific tag
 				tag := args[0]
 				conns, err := mgr.ListConnections(tag, "")
 				if err != nil { return err }
 				if len(conns) == 0 { cmd.Printf("标签 %s 下没有连接\n", tag); return nil }
 				cmd.Printf("标签 %s (%d 个连接):\n\n", tag, len(conns))
-				w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
-				fmt.Fprintln(w, "名称\t主机\t端口\t用户")
-				for _, c := range conns { fmt.Fprintf(w, "%s\t%s\t%d\t%s\n", c.Name, c.Host, c.Port, c.User) }
-				w.Flush()
+				headers := []string{"名称", "主机", "端口", "用户"}
+				var rows [][]string
+				for _, c := range conns { rows = append(rows, []string{c.Name, c.Host, fmt.Sprintf("%d", c.Port), c.User}) }
+				printTable(cmd.OutOrStdout(), headers, rows)
 				return nil
 			}
 			counts, err := mgr.ListTags()
@@ -164,10 +162,10 @@ func newRoot(mgr *service.ConnectionManager) *cobra.Command {
 			keys := make([]string, 0, len(counts))
 			for k := range counts { keys = append(keys, k) }
 			sort.Strings(keys)
-			w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
-			fmt.Fprintln(w, "标签\t连接数")
-			for _, k := range keys { fmt.Fprintf(w, "%s\t%d\n", k, counts[k]) }
-			w.Flush()
+			headers := []string{"标签", "连接数"}
+			var rows [][]string
+			for _, k := range keys { rows = append(rows, []string{k, fmt.Sprintf("%d", counts[k])}) }
+			printTable(cmd.OutOrStdout(), headers, rows)
 			return nil
 		},
 	}
