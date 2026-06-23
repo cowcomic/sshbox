@@ -30,3 +30,12 @@ func stopResizeWatcher() {
 		signal.Stop(resizeCh)
 	}
 }
+
+// getTerminalSize returns terminal dimensions. On Unix, term.GetSize works correctly.
+func getTerminalSize(fd int) (int, int, bool) {
+	w, h, err := term.GetSize(fd)
+	if err != nil {
+		return 0, 0, false
+	}
+	return w, h, true
+}
