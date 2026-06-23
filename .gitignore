@@ -14,3 +14,8 @@ Thumbs.db
 
 # Config (may contain secrets at runtime)
 config.json
+
+# Local docs (not tracked)
+PRD.md
+技术可行性.md
+.claude/
