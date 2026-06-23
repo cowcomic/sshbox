@@ -8,8 +8,9 @@ import (
 )
 
 var connectCmd = &cobra.Command{
-	Use:   "connect <name>",
-	Short: "连接SSH服务器",
+	Use:     "connect <name>",
+	Short:   "连接SSH服务器",
+	Aliases: []string{"c"},
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
