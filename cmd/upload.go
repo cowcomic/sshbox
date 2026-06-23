@@ -12,7 +12,7 @@ import (
 
 var uploadCmd = &cobra.Command{
 	Use:     "upload <name> <local_path> [remote_path]",
-	Short:   "上传文件到远程服务器",
+	Short:   "上传文件到远程服务器 (up)",
 	Aliases: []string{"up"},
 	Args:    cobra.RangeArgs(2, 3),
 	RunE: func(cmd *cobra.Command, args []string) error {

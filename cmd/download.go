@@ -12,7 +12,7 @@ import (
 
 var downloadCmd = &cobra.Command{
 	Use:     "download <name> <remote_path> [local_path]",
-	Short:   "从远程服务器下载文件",
+	Short:   "从远程服务器下载文件 (down)",
 	Aliases: []string{"down"},
 	Args:    cobra.RangeArgs(2, 3),
 	RunE: func(cmd *cobra.Command, args []string) error {
