@@ -25,7 +25,7 @@ var connectCmd = &cobra.Command{
 		}
 
 		fmt.Printf("正在连接 %s (%s:%d)...\n", name, conn.Host, conn.Port)
-		return ssh.Connect(conn.Host, conn.Port, conn.User, password)
+		return ssh.Connect(name, conn.Host, conn.Port, conn.User, password)
 	},
 }
 

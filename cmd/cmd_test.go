@@ -54,12 +54,12 @@ func newRoot(mgr *service.ConnectionManager) *cobra.Command {
 			return nil
 		},
 	}
-	addCmd.Flags().String("host", "", "主机地址（必填）")
-	addCmd.Flags().Int("port", 22, "端口号")
-	addCmd.Flags().String("user", "", "登录用户名（必填）")
-	addCmd.Flags().String("password", "", "登录密码（必填）")
-	addCmd.Flags().String("tag", "", "标签，多个用逗号分隔")
-	addCmd.Flags().String("notes", "", "备注信息")
+	addCmd.Flags().StringP("host", "H", "", "主机地址（必填）")
+	addCmd.Flags().IntP("port", "P", 22, "端口号")
+	addCmd.Flags().StringP("user", "u", "", "登录用户名（必填）")
+	addCmd.Flags().StringP("password", "p", "", "登录密码（必填）")
+	addCmd.Flags().StringP("tag", "t", "", "标签，多个用逗号分隔")
+	addCmd.Flags().StringP("notes", "n", "", "备注信息")
 
 	listCmd := &cobra.Command{
 		Use: "list", Short: "列出所有SSH连接",
@@ -141,8 +141,21 @@ func newRoot(mgr *service.ConnectionManager) *cobra.Command {
 	}
 
 	tagsCmd := &cobra.Command{
-		Use: "tags", Short: "列出所有标签",
+		Use: "tags [tag]", Short: "列出标签及其连接", Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) > 0 {
+				// Show connections for specific tag
+				tag := args[0]
+				conns, err := mgr.ListConnections(tag, "")
+				if err != nil { return err }
+				if len(conns) == 0 { cmd.Printf("标签 %s 下没有连接\n", tag); return nil }
+				cmd.Printf("标签 %s (%d 个连接):\n\n", tag, len(conns))
+				w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
+				fmt.Fprintln(w, "名称\t主机\t端口\t用户")
+				for _, c := range conns { fmt.Fprintf(w, "%s\t%s\t%d\t%s\n", c.Name, c.Host, c.Port, c.User) }
+				w.Flush()
+				return nil
+			}
 			counts, err := mgr.ListTags()
 			if err != nil { return err }
 			if len(counts) == 0 { cmd.Println("没有标签"); return nil }
@@ -188,7 +201,17 @@ func newRoot(mgr *service.ConnectionManager) *cobra.Command {
 	}
 	importCmd.Flags().Bool("merge", false, "合并模式（保留现有连接）")
 
-	cmd.AddCommand(addCmd, listCmd, showCmd, editCmd, rmCmd, tagsCmd, exportCmd, importCmd)
+	passwordCmd := &cobra.Command{
+		Use: "password <name>", Short: "查看连接密码", Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			pass, err := mgr.GetDecryptedPassword(args[0])
+			if err != nil { return err }
+			fmt.Fprintln(cmd.OutOrStdout(), pass)
+			return nil
+		},
+	}
+
+	cmd.AddCommand(addCmd, listCmd, showCmd, editCmd, rmCmd, tagsCmd, exportCmd, importCmd, passwordCmd)
 	return cmd
 }
 
@@ -312,4 +335,44 @@ func TestImportCommand(t *testing.T) {
 	if !strings.Contains(out, "✓ 成功导入 1 个连接") { t.Errorf("unexpected output: %q", out) }
 	showOut, _ := run(t, mgr, "show", "imported")
 	if !strings.Contains(showOut, "9.9.9.9") { t.Errorf("import did not work: %q", showOut) }
+}
+
+func TestPasswordCommand(t *testing.T) {
+	mgr := testManager(t)
+	run(t, mgr, "add", "s1", "--host", "1.1.1.1", "--user", "root", "--password", "mysecret")
+	out, err := run(t, mgr, "password", "s1")
+	if err != nil { t.Fatalf("password failed: %v", err) }
+	if !strings.Contains(out, "mysecret") { t.Errorf("password output incorrect: %q", out) }
+}
+
+func TestPasswordNonExistent(t *testing.T) {
+	mgr := testManager(t)
+	_, err := run(t, mgr, "password", "nope")
+	if err == nil { t.Error("password for non-existent should fail") }
+}
+
+func TestAddShortFlags(t *testing.T) {
+	mgr := testManager(t)
+	out, err := run(t, mgr, "add", "s1", "-H", "1.1.1.1", "-u", "admin", "-p", "pass", "-t", "prod,web", "-n", "notes")
+	if err != nil { t.Fatalf("add with short flags failed: %v", err) }
+	if !strings.Contains(out, "✓ 连接 s1 已添加") { t.Errorf("unexpected output: %q", out) }
+	// Verify the values were set correctly
+	showOut, _ := run(t, mgr, "show", "s1")
+	if !strings.Contains(showOut, "admin") { t.Errorf("short flag -u not working: %q", showOut) }
+	if !strings.Contains(showOut, "prod") { t.Errorf("short flag -t not working: %q", showOut) }
+}
+
+func TestTagsShowConnections(t *testing.T) {
+	mgr := testManager(t)
+	run(t, mgr, "add", "s1", "--host", "1.1.1.1", "--user", "root", "--password", "pass", "--tag", "prod")
+	run(t, mgr, "add", "s2", "--host", "2.2.2.2", "--user", "root", "--password", "pass", "--tag", "prod")
+	run(t, mgr, "add", "s3", "--host", "3.3.3.3", "--user", "root", "--password", "pass", "--tag", "dev")
+
+	// Show specific tag
+	out, err := run(t, mgr, "tags", "prod")
+	if err != nil { t.Fatalf("tags prod failed: %v", err) }
+	if !strings.Contains(out, "s1") { t.Errorf("tags prod missing s1: %q", out) }
+	if !strings.Contains(out, "s2") { t.Errorf("tags prod missing s2: %q", out) }
+	if strings.Contains(out, "s3") { t.Errorf("tags prod should not contain s3: %q", out) }
+	if !strings.Contains(out, "1.1.1.1") { t.Errorf("tags prod missing host: %q", out) }
 }

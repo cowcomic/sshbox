@@ -54,15 +54,16 @@ main.go        → Entry point
 
 | Command | Usage |
 |---------|-------|
-| `sshbox add <name>` | Add connection (`--host`, `--port`, `--user`, `--password`, `--tag`, `--notes`) |
+| `sshbox add <name>` | Add connection (`-H`/`--host`, `-P`/`--port`, `-u`/`--user`, `-p`/`--password`, `-t`/`--tag`, `-n`/`--notes`) |
 | `sshbox list` | List connections (`--tag`, `--search`, `--format table/json`) |
 | `sshbox connect <name>` | Open interactive SSH session |
+| `sshbox password <name>` | Show connection password (plaintext) |
 | `sshbox edit <name>` | Modify connection config |
 | `sshbox rm <name>` | Delete connection (with confirmation) |
 | `sshbox show <name>` | View connection details (password masked) |
 | `sshbox export` | Export config (`--output`, `--tag`) |
 | `sshbox import <file>` | Import config (`--merge` flag for merge mode) |
-| `sshbox tags` | List all tags with connection counts |
+| `sshbox tags [tag]` | List all tags, or show connections under a specific tag |
 
 ## Security Design
 

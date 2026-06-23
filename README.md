@@ -33,16 +33,17 @@ sshbox connect myserver
 sshbox add <name> --host <host> --user <user> --password <pass> [flags]
 ```
 
-| 参数 | 必填 | 默认值 | 说明 |
-|------|------|--------|------|
-| `--host` | 是 | - | 主机地址 |
-| `--port` | 否 | 22 | 端口号 |
-| `--user` | 是 | - | 登录用户名 |
-| `--password` | 是 | - | 登录密码 |
-| `--tag` | 否 | - | 标签，多个用逗号分隔 |
-| `--notes` | 否 | - | 备注信息 |
+| 参数 | 短参数 | 必填 | 默认值 | 说明 |
+|------|--------|------|--------|------|
+| `--host` | `-H` | 是 | - | 主机地址 |
+| `--port` | `-P` | 否 | 22 | 端口号 |
+| `--user` | `-u` | 是 | - | 登录用户名 |
+| `--password` | `-p` | 是 | - | 登录密码 |
+| `--tag` | `-t` | 否 | - | 标签，多个用逗号分隔 |
+| `--notes` | `-n` | 否 | - | 备注信息 |
 
 ```bash
+# 完整写法
 sshbox add prod-web-01 \
     --host 192.168.1.101 \
     --port 22 \
@@ -50,6 +51,9 @@ sshbox add prod-web-01 \
     --password mypass \
     --tag production,web \
     --notes "生产环境Web服务器"
+
+# 短参数
+sshbox add prod-web-01 -H 192.168.1.101 -u root -p mypass -t production,web
 ```
 
 ### sshbox list
@@ -77,6 +81,14 @@ sshbox list --format json
 
 ```bash
 sshbox connect <name>
+```
+
+### sshbox password
+
+查看连接的密码（明文输出）。
+
+```bash
+sshbox password <name>
 ```
 
 ### sshbox edit
@@ -123,10 +135,25 @@ sshbox show <name>
 
 ### sshbox tags
 
-列出所有标签及其连接数。
+列出所有标签及其连接数，或查看某个标签下的连接。
 
 ```bash
-sshbox tags
+sshbox tags            # 列出所有标签
+sshbox tags <tag>      # 查看指定标签下的连接
+```
+
+```bash
+$ sshbox tags
+标签         连接数
+production   5
+development  3
+
+$ sshbox tags production
+标签 production (5 个连接):
+
+名称          主机            端口  用户
+prod-web-01   192.168.1.101   22    root
+prod-web-02   192.168.1.102   22    root
 ```
 
 ### sshbox export

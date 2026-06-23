@@ -21,13 +21,13 @@ var addCmd = &cobra.Command{
 		notes, _ := cmd.Flags().GetString("notes")
 
 		if host == "" {
-			return fmt.Errorf("缺少必填参数 --host")
+			return fmt.Errorf("缺少必填参数 --host/-H")
 		}
 		if user == "" {
-			return fmt.Errorf("缺少必填参数 --user")
+			return fmt.Errorf("缺少必填参数 --user/-u")
 		}
 		if password == "" {
-			return fmt.Errorf("缺少必填参数 --password")
+			return fmt.Errorf("缺少必填参数 --password/-p")
 		}
 
 		var tags []string
@@ -50,11 +50,11 @@ var addCmd = &cobra.Command{
 }
 
 func init() {
-	addCmd.Flags().String("host", "", "主机地址（必填）")
-	addCmd.Flags().Int("port", 22, "端口号")
-	addCmd.Flags().String("user", "", "登录用户名（必填）")
-	addCmd.Flags().String("password", "", "登录密码（必填）")
-	addCmd.Flags().String("tag", "", "标签，多个用逗号分隔")
-	addCmd.Flags().String("notes", "", "备注信息")
+	addCmd.Flags().StringP("host", "H", "", "主机地址（必填）")
+	addCmd.Flags().IntP("port", "P", 22, "端口号")
+	addCmd.Flags().StringP("user", "u", "", "登录用户名（必填）")
+	addCmd.Flags().StringP("password", "p", "", "登录密码（必填）")
+	addCmd.Flags().StringP("tag", "t", "", "标签，多个用逗号分隔")
+	addCmd.Flags().StringP("notes", "n", "", "备注信息")
 	rootCmd.AddCommand(addCmd)
 }
