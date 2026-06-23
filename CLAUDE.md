@@ -56,11 +56,13 @@ main.go        → Entry point
 |---------|-------|
 | `sshbox add <name>` | Add connection (`-H`/`--host`, `-P`/`--port`, `-u`/`--user`, `-p`/`--password`, `-t`/`--tag`, `-n`/`--notes`) |
 | `sshbox list` | List connections (`--tag`, `--search`, `--format table/json`) |
-| `sshbox connect <name>` | Open interactive SSH session |
+| `sshbox connect <name>` | Open interactive SSH session (alias: `c`) |
 | `sshbox password <name>` | Show connection password (plaintext) |
-| `sshbox edit <name>` | Modify connection config |
+| `sshbox edit <name>` | Modify connection config (`-N`/`--name` to rename) |
 | `sshbox rm <name>` | Delete connection (with confirmation) |
 | `sshbox show <name>` | View connection details (password masked) |
+| `sshbox upload <name>` | Upload file to remote (`-r` for dirs, alias: `up`) |
+| `sshbox download <name>` | Download file from remote (`-r` for dirs, alias: `down`) |
 | `sshbox export` | Export config (`--output`, `--tag`) |
 | `sshbox import <file>` | Import config (`--merge` flag for merge mode) |
 | `sshbox tags [tag]` | List all tags, or show connections under a specific tag |
