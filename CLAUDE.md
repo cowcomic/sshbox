@@ -16,8 +16,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build & Development
 
 ```bash
-# Build
+# Build (dev)
 go build -o sshbox .
+
+# Build (with version info)
+go build -ldflags "-X main.version=v1.0.0 -X main.commit=$(git rev-parse --short HEAD) -X main.date=$(date -u +%Y-%m-%d)" -o sshbox .
 
 # Run
 go run . <command> [args] [flags]
@@ -31,6 +34,17 @@ go test ./internal/service/
 # Test single case
 go test -run TestAddConnection ./internal/service/
 ```
+
+## Release
+
+Push a git tag to trigger GitHub Actions → GoReleaser → cross-platform builds → GitHub Release.
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+Artifacts: `sshbox_v1.0.0_{windows,linux,darwin}_{amd64,arm64}.zip`
 
 ## Architecture
 
