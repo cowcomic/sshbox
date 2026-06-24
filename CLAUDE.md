@@ -58,6 +58,7 @@ main.go        → Entry point
 | `sshbox list` | List connections (`--tag`, `--search`, `--format table/json`) |
 | `sshbox connect <name>` | Open interactive SSH session (alias: `c`) |
 | `sshbox password <name>` | Show connection password (plaintext) |
+| `sshbox exec <name> <cmd>` | Execute command on remote host and print output |
 | `sshbox edit <name>` | Modify connection config (`-N`/`--name` to rename) |
 | `sshbox rm <name>` | Delete connection (with confirmation) |
 | `sshbox show <name>` | View connection details (password masked) |

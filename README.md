@@ -91,6 +91,20 @@ sshbox connect <name>
 sshbox password <name>
 ```
 
+### sshbox exec
+
+在远程服务器执行单条命令并返回结果（不进入交互式终端）。
+
+```bash
+sshbox exec <name> <command>
+```
+
+```bash
+sshbox exec prod-web "df -h"
+sshbox exec prod-web "free -m"
+sshbox exec prod-web "docker ps --format 'table {{.Names}}\t{{.Status}}'"
+```
+
 ### sshbox edit
 
 修改SSH连接配置。只更新指定的字段。

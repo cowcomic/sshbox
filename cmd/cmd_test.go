@@ -211,7 +211,16 @@ func newRoot(mgr *service.ConnectionManager) *cobra.Command {
 		},
 	}
 
-	cmd.AddCommand(addCmd, listCmd, showCmd, editCmd, rmCmd, tagsCmd, exportCmd, importCmd, passwordCmd)
+	execCmd := &cobra.Command{
+		Use: "exec <name> <command>", Short: "在远程服务器执行命令", Args: cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// In tests, just echo the command
+			cmd.Printf("exec: %s\n", args[1])
+			return nil
+		},
+	}
+
+	cmd.AddCommand(addCmd, listCmd, showCmd, editCmd, rmCmd, tagsCmd, exportCmd, importCmd, passwordCmd, execCmd)
 	return cmd
 }
 
