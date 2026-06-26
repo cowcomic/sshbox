@@ -61,7 +61,8 @@ func Connect(name string, host string, port int, user, password string) error {
 	}
 
 	modes := ssh.TerminalModes{
-		ssh.ECHO:          1, // 由远程 PTY 负责回显
+		ssh.ECHO:          1,   // 由远程 PTY 负责回显
+		ssh.VERASE:        0x7F, // 设置退格键为 DEL，兼容 Windows Terminal
 		ssh.TTY_OP_ISPEED: 14400,
 		ssh.TTY_OP_OSPEED: 14400,
 	}
