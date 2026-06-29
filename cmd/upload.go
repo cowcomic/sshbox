@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 
 	"sshbox/internal/ssh"
@@ -65,7 +66,7 @@ var uploadCmd = &cobra.Command{
 		if info.IsDir() {
 			// 目录上传：如果远端路径不存在，用目录名
 			if ri, err := sftpClient.Stat(remotePath); err != nil || !ri.IsDir() {
-				remotePath = remotePath + "/" + filepath.Base(localPath)
+				remotePath = path.Join(remotePath, filepath.Base(localPath))
 			}
 			fmt.Printf("上传目录 %s → %s:%s\n", localPath, name, remotePath)
 			return ssh.UploadDir(sftpClient, localPath, remotePath)

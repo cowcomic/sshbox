@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -48,9 +49,9 @@ func UploadFile(client *sftp.Client, local, remote string) error {
 	}
 	defer src.Close()
 
-	// 如果 remote 是目录，自动拼接文件名
+	// 如果 remote 是目录，自动拼接文件名（远程路径始终用 /）
 	if ri, err := client.Stat(remote); err == nil && ri.IsDir() {
-		remote = filepath.Join(remote, filepath.Base(local))
+		remote = path.Join(remote, filepath.Base(local))
 	}
 
 	dst, err := client.Create(remote)
@@ -107,23 +108,30 @@ func UploadDir(client *sftp.Client, localDir, remoteDir string) error {
 		return fmt.Errorf("%s 不是目录", localDir)
 	}
 
-	// 创建远端根目录
-	client.Mkdir(remoteDir)
+	// 创建远端根目录（忽略已存在的情况）
+	if _, err := client.Stat(remoteDir); err != nil {
+		if err := client.Mkdir(remoteDir); err != nil {
+			return fmt.Errorf("创建远端目录失败: %w", err)
+		}
+	}
 
-	return filepath.Walk(localDir, func(path string, fi os.FileInfo, err error) error {
+	return filepath.Walk(localDir, func(p string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
-		rel, _ := filepath.Rel(localDir, path)
+		rel, _ := filepath.Rel(localDir, p)
 		rel = filepath.ToSlash(rel) // 统一用 /
-		remotePath := remoteDir + "/" + rel
+		remotePath := path.Join(remoteDir, rel)
 
 		if fi.IsDir() {
-			return client.Mkdir(remotePath)
+			if _, err := client.Stat(remotePath); err != nil {
+				return client.Mkdir(remotePath)
+			}
+			return nil
 		}
 
-		return UploadFile(client, path, remotePath)
+		return UploadFile(client, p, remotePath)
 	})
 }
 
@@ -151,7 +159,7 @@ func downloadDirRecursive(client *sftp.Client, remoteDir, localDir string) error
 	}
 
 	for _, entry := range entries {
-		remotePath := remoteDir + "/" + entry.Name()
+		remotePath := path.Join(remoteDir, entry.Name())
 		localPath := filepath.Join(localDir, entry.Name())
 
 		if entry.IsDir() {
