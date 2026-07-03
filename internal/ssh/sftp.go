@@ -60,17 +60,18 @@ func UploadFile(client *sftp.Client, local, remote string) error {
 	}
 	defer dst.Close()
 
-	return copyWithProgress(dst, src, info.Size(), filepath.Base(local))
+	return copyWithProgress(dst, src, 0, info.Size(), filepath.Base(local))
 }
 
 // DownloadFile downloads a single remote file to the local path.
-func DownloadFile(client *sftp.Client, remote, local string) error {
-	info, err := client.Stat(remote)
+// Supports resume: if a partial local file exists, it continues from where it left off.
+func DownloadFile(client *sftp.Client, remote, local string) (bool, error) {
+	remoteInfo, err := client.Stat(remote)
 	if err != nil {
-		return fmt.Errorf("远端文件不存在: %w", err)
+		return false, fmt.Errorf("远端文件不存在: %w", err)
 	}
-	if info.IsDir() {
-		return fmt.Errorf("%s 是目录，请使用 -r 参数", remote)
+	if remoteInfo.IsDir() {
+		return false, fmt.Errorf("%s 是目录，请使用 -r 参数", remote)
 	}
 
 	// 如果 local 是目录，自动拼接文件名
@@ -78,19 +79,54 @@ func DownloadFile(client *sftp.Client, remote, local string) error {
 		local = filepath.Join(local, filepath.Base(remote))
 	}
 
+	remoteSize := remoteInfo.Size()
+	resumed := false
+
+	// 检测本地文件，判断是否需要续传
+	var localSize int64
+	if localInfo, err := os.Stat(local); err == nil {
+		localSize = localInfo.Size()
+		if localSize > remoteSize {
+			// 本地文件比远程大，重新下载
+			if err := os.Remove(local); err != nil {
+				return false, fmt.Errorf("删除损坏的本地文件失败: %w", err)
+			}
+			localSize = 0
+		} else if localSize == remoteSize {
+			// 已完成，跳过
+			fmt.Printf("  %s 已完成，跳过\n", filepath.Base(local))
+			return false, nil
+		}
+		// localSize < remoteSize → 续传
+		resumed = localSize > 0
+	}
+
 	src, err := client.Open(remote)
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer src.Close()
 
-	dst, err := os.Create(local)
+	// 续传时 Seek 到断点位置
+	if localSize > 0 {
+		if _, err := src.Seek(localSize, io.SeekStart); err != nil {
+			return false, fmt.Errorf("Seek 远程文件失败: %w", err)
+		}
+	}
+
+	// 续传时追加写入，否则创建新文件
+	var dst *os.File
+	if resumed {
+		dst, err = os.OpenFile(local, os.O_WRONLY|os.O_APPEND, 0644)
+	} else {
+		dst, err = os.OpenFile(local, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	}
 	if err != nil {
-		return fmt.Errorf("创建本地文件失败: %w", err)
+		return false, fmt.Errorf("打开本地文件失败: %w", err)
 	}
 	defer dst.Close()
 
-	return copyWithProgress(dst, src, info.Size(), filepath.Base(remote))
+	return resumed, copyWithProgress(dst, src, localSize, remoteSize, filepath.Base(remote))
 }
 
 // UploadDir recursively uploads a local directory to the remote path.
@@ -170,7 +206,7 @@ func downloadDirRecursive(client *sftp.Client, remoteDir, localDir string) error
 				return err
 			}
 		} else {
-			if err := DownloadFile(client, remotePath, localPath); err != nil {
+			if _, err := DownloadFile(client, remotePath, localPath); err != nil {
 				return err
 			}
 		}
@@ -180,7 +216,9 @@ func downloadDirRecursive(client *sftp.Client, remoteDir, localDir string) error
 }
 
 // copyWithProgress copies from src to dst with progress display.
-func copyWithProgress(dst io.Writer, src io.Reader, total int64, name string) error {
+// offset is the number of bytes already downloaded (for resume).
+// total is the total file size.
+func copyWithProgress(dst io.Writer, src io.Reader, offset, total int64, name string) error {
 	buf := make([]byte, 32*1024)
 	var copied int64
 	start := time.Now()
@@ -197,7 +235,7 @@ func copyWithProgress(dst io.Writer, src io.Reader, total int64, name string) er
 
 			now := time.Now()
 			if now.Sub(lastPrint) >= 200*time.Millisecond || readErr != nil {
-				printProgress(name, copied, total, start)
+				printProgress(name, offset+copied, total, start)
 				lastPrint = now
 			}
 		}

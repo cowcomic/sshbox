@@ -70,8 +70,17 @@ var downloadCmd = &cobra.Command{
 		if li, err := os.Stat(localPath); err == nil && li.IsDir() {
 			localPath = filepath.Join(localPath, filepath.Base(remotePath))
 		}
-		fmt.Printf("下载文件 %s:%s → %s\n", name, remotePath, localPath)
-		return ssh.DownloadFile(sftpClient, remotePath, localPath)
+
+		// 显示下载路径（续传标识）
+		localInfo, _ := os.Stat(localPath)
+		if localInfo != nil && localInfo.Size() > 0 {
+			fmt.Printf("下载文件 %s:%s → %s (续传)\n", name, remotePath, localPath)
+		} else {
+			fmt.Printf("下载文件 %s:%s → %s\n", name, remotePath, localPath)
+		}
+
+		_, err = ssh.DownloadFile(sftpClient, remotePath, localPath)
+		return err
 	},
 }
 
