@@ -235,7 +235,7 @@ func copyWithProgress(dst io.Writer, src io.Reader, offset, total int64, name st
 
 			now := time.Now()
 			if now.Sub(lastPrint) >= 200*time.Millisecond || readErr != nil {
-				printProgress(name, offset+copied, total, start)
+				printProgress(name, offset+copied, total, copied, start)
 				lastPrint = now
 			}
 		}
@@ -247,18 +247,19 @@ func copyWithProgress(dst io.Writer, src io.Reader, offset, total int64, name st
 		}
 	}
 
-	printProgress(name, total, total, start)
+	printProgress(name, offset+copied, total, copied, start)
 	fmt.Println() // 换行
 	return nil
 }
 
-func printProgress(name string, current, total int64, start time.Time) {
+// printProgress displays download progress. copied is the bytes actually transferred (for speed calculation).
+func printProgress(name string, current, total, copied int64, start time.Time) {
 	elapsed := time.Since(start).Seconds()
 	if elapsed == 0 {
 		elapsed = 0.001
 	}
 
-	speed := float64(current) / elapsed
+	speed := float64(copied) / elapsed
 	var percent float64
 	if total > 0 {
 		percent = float64(current) / float64(total) * 100
